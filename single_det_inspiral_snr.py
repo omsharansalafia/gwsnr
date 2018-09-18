@@ -38,7 +38,7 @@ def SNR(mass1, mass2, dl, z, iota, theta, phi, psi, ASD=(zdhP_f,zdhP_asd)):
     
     Arguments:
     - mass1, mass2: component masses in Msun
-    - dl: luminosity distance in cm
+    - dl: luminosity distance in Mpc
     - z: redshift
     - iota: angle between orbital angular momentum and line of sight
     - theta, phi: spherical coordinates of the binary direction in the detector frame
