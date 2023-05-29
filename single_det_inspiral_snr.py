@@ -2,16 +2,9 @@ import math as m
 import numpy as np
 import os 
 dir_path = os.path.dirname(os.path.realpath(__file__))
+from .constants import *
 
-# Load ASD
-zdhP_f,zdhP_asd = np.loadtxt(os.path.join(dir_path,'zero_det_high_P.txt'),usecols=[0,1],unpack=True)
-
-# Constants
-c = 3e10
-G = 6.67e-8
-M_sun_to_g = 1.989e33 # Sun mass [g]
-Mpc_to_cm = 3.08e24 # Megaparsec [cm]
-
+"""
 # Detector antenna pattern functions (as given in Schutz+11) 
 def Fplus(theta, phi, psi):
     return 0.5*(1.+np.cos(theta)**2)*np.cos(2*phi)* \
@@ -19,7 +12,7 @@ def Fplus(theta, phi, psi):
 
 def Fcross(theta, phi, psi):
     return 0.5*(1+np.cos(theta)**2)*np.cos(2*phi)*np.sin(2*psi)+np.cos(theta)*np.sin(2*phi)*np.cos(2*psi)
-
+"""
 
 # fourier transformed inspiral strain as given in Maggiore's book
 def Hft(freq,Mc,dl,iota,fplus,fcross):
@@ -33,7 +26,7 @@ def Hft(freq,Mc,dl,iota,fplus,fcross):
     return fplus*hplusft+fcross*hcrossft
 
 # SNR computation following Sesana & Colpi 2017
-def SNR(mass1, mass2, dl, z, iota, theta, phi, psi, ASD=(zdhP_f,zdhP_asd)):
+def SNR(mass1, mass2, dl, z, iota, RA_deg, Dec_deg, gmst_deg, psi, detector):
     """Compute the single detector SNR for the inspiral of a compact binary, with a cutoff frequency at the non-spinning ISCO.
     
     Arguments:
@@ -41,16 +34,16 @@ def SNR(mass1, mass2, dl, z, iota, theta, phi, psi, ASD=(zdhP_f,zdhP_asd)):
     - dl: luminosity distance in Mpc
     - z: redshift
     - iota: angle between orbital angular momentum and line of sight
-    - theta, phi: spherical coordinates of the binary direction in the detector frame
-    - psi: polarization angle in the detector frame
-    
+    - RA_deg, Dec_deg: source sky position in degrees
+    - psi: polarization angle in geocentric frame
+    - gmst_deg: Greenwich mean sidereal time at coalescence, in degrees
+        
     Keyword arguments:
-    - ASD: tuple (f,asd) containing an array of frequencies f and the corresponding detector ASD. Default: LIGO design zero_det_high_P ASD, with 200 Mpc BNS range.
+    - detector: instance of detector class. Default: LIGO Livingston with design zero_det_high_P PSD (200 Mpc BNS range).
     
     Returns:
-    - snr: single detector SNR for the given ASD (scalar)
+    - snr: single detector SNR for the given PSD (scalar)
     """
-    freq,asd = ASD # unpack ASD
     
     # chirp mass
     Mc = (mass1*mass2)**(3./5.)/(mass1+mass2)**(1./5.)*(1+z)*M_sun_to_g
@@ -58,10 +51,10 @@ def SNR(mass1, mass2, dl, z, iota, theta, phi, psi, ASD=(zdhP_f,zdhP_asd)):
     dL = dl*Mpc_to_cm
     
     # compute antenna pattern functions
-    fplus = Fplus(theta, phi, psi)
-    fcross = Fcross(theta, phi, psi)
+    fplus,fcross = detector.antenna_pattern(RA_deg,Dec_deg,gmst_deg,psi)
     
     # compute strain amplitude at the same frequencies as the ASD ones
+    freq = detector.PSD[0]
     hft =  Hft(freq,Mc,dL,iota,fplus,fcross)
     
     # cutoff frequency at f_isco
@@ -69,7 +62,7 @@ def SNR(mass1, mass2, dl, z, iota, theta, phi, psi, ASD=(zdhP_f,zdhP_asd)):
     hft[freq>fisco]=0.
     
     # perform the SNR integral as given in Sesana & Colpi 2017
-    integrandum = np.abs(2*hft*np.sqrt(freq))**2/asd**2
+    integrandum = np.abs(2*hft*np.sqrt(freq))**2/detector.PSD[1]**2
     snr = np.sqrt(np.trapz(integrandum,np.log(freq)))
     
     return snr
