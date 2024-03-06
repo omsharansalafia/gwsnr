@@ -43,11 +43,11 @@ class detector:
         
         # following Whelan 2013
         
-        a = (RA_deg-gmst_deg)/180.*np.pi
-        d = Dec_deg/180.*np.pi
+        a = np.array((RA_deg-gmst_deg)/180.*np.pi)
+        d = np.array(Dec_deg/180.*np.pi)
         
-        i = np.array([np.sin(a),-np.cos(a),0.])
-        j = np.array([-np.sin(d)*np.cos(a),-np.sin(d)*np.sin(a),np.cos(d)])
+        i = np.vstack([np.sin(a),-np.cos(a),np.zeros(a.shape)])
+        j = np.vstack([-np.sin(d)*np.cos(a),-np.sin(d)*np.sin(a),np.cos(d)])
         
         l =  i*np.cos(psi)+j*np.sin(psi)
         m = -i*np.sin(psi)+j*np.cos(psi)
@@ -55,8 +55,8 @@ class detector:
         eplus  = l[:,None]*l[None,:] - m[:,None]*m[None,:]
         ecross = l[:,None]*m[None,:] + m[:,None]*l[None,:]
         
-        Fplus  = np.sum(s.d_ab*eplus)
-        Fcross = np.sum(s.d_ab*ecross)
+        Fplus  = np.sum(np.sum(s.d_ab[:,:,None]*eplus,axis=0),axis=0)
+        Fcross = np.sum(np.sum(s.d_ab[:,:,None]*ecross,axis=0),axis=0)
         
         return Fplus,Fcross
     
